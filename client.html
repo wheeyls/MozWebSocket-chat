@@ -1,16 +1,29 @@
+<html>
+<head>
+<script src="pubsub.js"></script>
 <script>
-var s = new MozWebSocket("ws://127.0.0.1:1337");
+(function() {
+  
+  window.WebSocket = window.WebSocket || window.mozWebSocket;
 
-s.onopen = function() {
-    console.log("Opened");
-    s.send("a");
-}
+  var s = new WebSocket("ws://firefox.bigmachines.com:8124");
 
-s.onmessage = function(msg) {
-    console.log(msg);
-}
+  s.onopen = function() {
+      console.log("Opened");
+      s.send("a");
+  }
 
-s.onclose = function() {
-    console.log("Closed");
-}
+  s.onmessage = function(msg) {
+      console.log(msg);
+  }
+
+  s.onclose = function() {
+      console.log("Closed");
+  }
+}());
 </script>
+</head>
+<body>
+<div id="br-chat"/>
+</body>
+</html>

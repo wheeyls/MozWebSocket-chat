@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<link rel="stylesheet" href="http://code.jquery.com/qunit/git/qunit.css" type="text/css" media="screen" />
+<script type="text/javascript" src="http://code.jquery.com/qunit/git/qunit.js"></script>
+
+<script>
+$(document).ready(function(){
+    var ws;
+    window.WebSocket = window.WebSocket || window.MozWebSocket;
+    module("Connecting");
+    test("Connect and show success", function() {
+      stop();
+      ws = new WebSocket("ws://firefox.bigmachines.com:8124/");
+      
+      ws.onopen = function(){
+        start();
+        ok( true, "Connection Opened" );
+        ws.close();
+      }
+    });
+    module("Protocol", {
+      setup: function() {
+        ws = new WebSocket("ws://firefox.bigmachines.com:8124/");
+      },
+      teardown: function() {
+        ws.close();
+      }
+    });
+
+    test("should see global chat", function() {
+      var msg = "abcde";
+      stop();
+      ws.onmessage = function(m) {
+        start();
+        m = JSON.parse(m.data);
+        equals(msg, m.says, "message comes back");
+        equals("said", m.evt, "custom event type");
+      };
+      ws.onopen = function() {
+        ws.send("say channel:global "+msg);
+      };
+    });
+
+    test("show message when joining channel", function() {
+      stop();
+      var msg = "joined channel new";
+      ws.onopen = function() {
+        ws.send("name me");
+        ws.send("channel new");
+      };
+      ws.onmessage = function(m) {
+        m = JSON.parse(m.data);
+        if(m.says === msg) { done(m); }
+      };
+      function done(m) {
+        start();
+        equals(msg, m.says, "announces room changes");
+        equals("joined", m.evt, "custom event type");
+      }
+    });
+    test("should not see room chat if not there", function() {
+      var msg = "abcde";
+      stop();
+      ws.onmessage = function(m) {
+        start();
+        m = JSON.parse(m.data);
+        equals(msg, m.says, "message comes back");
+      };
+      ws.onopen = function() {
+        ws.send("say channel:abcde borked"+msg);
+        ws.send("say channel:global "+msg);
+      };
+    });
+    test("should see room chat if there", function() {
+      var msg = "abcde";
+      stop();
+      ws.onmessage = function(m) {
+        m = JSON.parse(m.data);
+        if(m.says === msg) { done(m); }
+      };
+      ws.onopen = function() {
+        ws.send("channel abcde");
+        ws.send("say channel:abcde "+msg);
+      };
+      function done(m) {
+        start();
+        equals(msg, m.says, "message comes back");
+        equals("said", m.evt, "event type");
+      }
+    });
+    test("change name", function() {
+      var msg = "abcde";
+      stop();
+      ws.onmessage = function(m) {
+        start();
+        m = JSON.parse(m.data);
+        equals(msg, m.says, "name is changed to " + msg);
+        equals("named", m.evt, "name event");
+      };
+      ws.onopen = function() {
+        ws.send("name "+msg);
+      };
+    });
+});
+</script>
+
+</head>
+<body>
+<h1 id="qunit-header">QUnit example</h1>
+<h2 id="qunit-banner"></h2>
+<div id="qunit-testrunner-toolbar"></div>
+<h2 id="qunit-userAgent"></h2>
+<ol id="qunit-tests"></ol>
+<div id="qunit-fixture">test markup, will be hidden</div>
+</body>
+</html>
+

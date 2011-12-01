@@ -8,6 +8,13 @@
 <script>
 $(document).ready(function(){
     var ws;
+    function wait_for(test, message) {
+      function done() {
+        start();
+        ok(true, message);
+      }
+      if(test) {done();}
+    };
     window.WebSocket = window.WebSocket || window.MozWebSocket;
     module("Connecting");
     test("Connect and show success", function() {
@@ -52,13 +59,8 @@ $(document).ready(function(){
       };
       ws.onmessage = function(m) {
         m = JSON.parse(m.data);
-        if(m.says === msg) { done(m); }
+        wait_for(m.says === msg, "announces room change");
       };
-      function done(m) {
-        start();
-        equals(msg, m.says, "announces room changes");
-        equals("joined", m.evt, "custom event type");
-      }
     });
     test("should not see room chat if not there", function() {
       var msg = "abcde";
@@ -78,17 +80,12 @@ $(document).ready(function(){
       stop();
       ws.onmessage = function(m) {
         m = JSON.parse(m.data);
-        if(m.says === msg) { done(m); }
+        wait_for(m.says === msg, "message came back");
       };
       ws.onopen = function() {
         ws.send("channel abcde");
         ws.send("say channel:abcde "+msg);
       };
-      function done(m) {
-        start();
-        equals(msg, m.says, "message comes back");
-        equals("said", m.evt, "event type");
-      }
     });
     test("change name", function() {
       var msg = "abcde";

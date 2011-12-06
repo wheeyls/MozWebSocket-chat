@@ -30,6 +30,11 @@ $(document).ready(function(){
     module("Protocol", {
       setup: function() {
         ws = new WebSocket("ws://firefox.bigmachines.com:8124/");
+        ws._send = function(msg) {
+          msg = JSON.stringify(msg);
+          console.log(msg);
+          ws.send(msg);
+        };
       },
       teardown: function() {
         ws.close();
@@ -46,16 +51,36 @@ $(document).ready(function(){
         equals("said", m.evt, "custom event type");
       };
       ws.onopen = function() {
-        ws.send("say channel:global "+msg);
+        ws._send({command:"say", channel:"global", statement: msg});
       };
     });
 
+    test("show list when joining channel", function() {
+      stop();
+      var msg = ["me"];
+      ws.onopen = function() {
+        ws._send({command:"name", statement:"me"});
+        ws._send({command:"channel", statement:"new"});
+      };
+      ws.onmessage = function(m) {
+        m = JSON.parse(m.data);
+        wait_for(function(){
+          console.log(m);
+          var cond1 = m.says[0] ===  msg[0],
+            cond2 = m.evt === "list",
+            cond3 = m.channel === "new",
+            cond4 = m.from === "Composure";
+
+          return cond1 && cond2 && cond3 && cond4;
+        }(), "rooms lists");
+      };
+    });
     test("show message when joining channel", function() {
       stop();
       var msg = "joined channel new";
       ws.onopen = function() {
-        ws.send("name me");
-        ws.send("channel new");
+        ws._send({command:"name", statement:"me"});
+        ws._send({command:"channel", statement:"new"});
       };
       ws.onmessage = function(m) {
         m = JSON.parse(m.data);
@@ -71,20 +96,21 @@ $(document).ready(function(){
         equals(msg, m.says, "message comes back");
       };
       ws.onopen = function() {
-        ws.send("say channel:abcde borked"+msg);
-        ws.send("say channel:global "+msg);
+        ws._send({command:"say", statement:"borked"+msg, channel: "abcde"});
+        ws._send({command:"say", statement:msg, channel: "global"});
       };
     });
     test("should see room chat if there", function() {
       var msg = "abcde";
       stop();
       ws.onmessage = function(m) {
+        console.log(m);
         m = JSON.parse(m.data);
         wait_for(m.says === msg, "message came back");
       };
       ws.onopen = function() {
-        ws.send("channel abcde");
-        ws.send("say channel:abcde "+msg);
+        ws._send({command:"channel", statement:"new"});
+        ws._send({command:"say", statement:msg, channel:"new"});
       };
     });
     test("change name", function() {
@@ -97,7 +123,7 @@ $(document).ready(function(){
         equals("named", m.evt, "name event");
       };
       ws.onopen = function() {
-        ws.send("name "+msg);
+        ws._send({command:"name", statement:msg});
       };
     });
 });

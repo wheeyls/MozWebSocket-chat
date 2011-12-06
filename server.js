@@ -11,6 +11,14 @@ var Client = function(conn) {
   this.init_connection();
 }
 
+Client.broadcast_list = function(channel) {
+  var all = [];
+  ps.each(channel, function(val){
+    all.push(val.u_id && (val.u_id.name || val.u_id.id));
+  });
+  ps.pub(channel, ["list", {name: "Composure"}, all]);
+};
+
 Client.prototype = {
   send: function(evt, sender, msg) {
     var name = sender.name || sender.id, message = {evt: evt, from: name, says: msg, channel: this.current_channel};
@@ -20,7 +28,7 @@ Client.prototype = {
     var me = this;
     ps.sub("global",function() { 
       me.send.apply(me, arguments);
-    }, me.id);
+    }, me);
 
     me.conn.on("message", function(message) {
       if(message.type === "utf8") {
@@ -29,8 +37,8 @@ Client.prototype = {
     });
 
     me.conn.on('close', function(connection) {
-      ps.clear("global", me.id);     
-      ps.clear(me.current_channel, me.id);     
+      ps.clear("global", me);     
+      ps.clear(me.current_channel, me);     
       console.log("Closed - " + me.id);
     });
 	},
@@ -39,19 +47,10 @@ Client.prototype = {
     // example: say channel:global hi!
     // example: name New Name
     // example: channel new_channel
-    var process_msg = msg.match(/^\s*(\w+)\s+(channel:([\w]+))*\s*(.*)$/),
-      command,
-      channel,
-      statement;
+    var process_msg = JSON.parse(msg);
 
-    if(process_msg) {
-      command = process_msg[1];
-      channel = process_msg[3];
-      statement = process_msg[4];
-    }
-      
-    if(!command) {console.log("Parser error! - " + msg + process_msg);}
-    return {command: command, channel: channel, statement: statement};
+    if(!process_msg) {console.log("Parser error! - " + msg + process_msg);}
+    return process_msg;
   },
   use: function(message) {
     var command = message.command,
@@ -67,18 +66,21 @@ Client.prototype = {
       case "name":
         me.name = statement;
         me.send("named", me, statement);
+        Client.broadcast_list(me.current_channel);
 
         break;
       case "channel":
         ps.pub(me.current_channel, ["left", me, "left channel "+me.current_channel]);
-        ps.clear(me.current_channel, me.id);
+        ps.clear(me.current_channel, me);
+        Client.broadcast_list(me.current_channel);
 
         ps.sub(statement, function() {
           me.send.apply(me, arguments);
-        }, me.id);
+        }, me);
 
         me.current_channel = statement;
         ps.pub(statement, ["joined", me, "joined channel "+statement]);
+        Client.broadcast_list(me.current_channel);
 
         break;
     }

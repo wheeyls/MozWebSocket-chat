@@ -43,6 +43,11 @@
         }
       }}
     };
+    me.each = function(topic, callback) {
+      var tops = me.functions[topic] || [];
+
+      tops.forEach(callback);
+    };
 
     subject.pub = me.pub;
     subject.sub = me.sub;

@@ -55,12 +55,13 @@ Client.prototype = {
   use: function(message) {
     if(!message) {return;}
     var command = message.command,
-      channel = message.channel || "global",
+      channel = message.channel,
       statement = message.statement,
       me = this;
 
     switch(command) {
       case "say":
+        if(!channel) {break;}
         ps.pub(channel, ["said" , me, statement]);
 
         break;
@@ -79,6 +80,7 @@ Client.prototype = {
           me.send.apply(me, arguments);
         }, me);
 
+        if(!statement) {break;}
         me.current_channel = statement;
         ps.pub(statement, ["joined", me, "joined channel "+statement]);
         Client.broadcast_list(me.current_channel);

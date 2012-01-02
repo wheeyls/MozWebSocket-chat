@@ -43,16 +43,17 @@ Client.prototype = {
     });
 	},
   parse: function(msg) {
-    // message will be in the format: command [channel:name] message
-    // example: say channel:global hi!
-    // example: name New Name
-    // example: channel new_channel
-    var process_msg = JSON.parse(msg);
+    var process_msg;
+    try {
+      process_msg = JSON.parse(msg);
+    } catch(e) {
+      console.log("Parser error! - " + msg + process_msg);
+    }
 
-    if(!process_msg) {console.log("Parser error! - " + msg + process_msg);}
     return process_msg;
   },
   use: function(message) {
+    if(!message) {return;}
     var command = message.command,
       channel = message.channel || "global",
       statement = message.statement,

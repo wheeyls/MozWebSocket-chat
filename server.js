@@ -55,7 +55,7 @@ Client.prototype = {
   use: function(message) {
     if(!message) {return;}
     var command = message.command,
-      channel = message.channel,
+      channel = message.channel || "global",
       statement = message.statement,
       me = this;
 
